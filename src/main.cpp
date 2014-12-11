@@ -290,10 +290,20 @@ void GetEvents(int player, bool &quit, bool &newGame){
 				if (GetPosition(x, y)){
 
 					if (player == CIRCLE){
-						Mix_PlayChannel(-1, sfxClickO, 0);
+						if (grid[posX][posY] == NULLCHAR){
+							Mix_PlayChannel(-1, sfxClickO, 0);
+						}
+						else{
+							Mix_PlayChannel(-1, sfxInvalidClick, 0);
+						}
 					}
 					else if (player == CROSS){
-						Mix_PlayChannel(-1, sfxClickX, 0);
+						if (grid[posX][posY] == NULLCHAR){
+							Mix_PlayChannel(-1, sfxClickX, 0);
+						}
+						else{
+							Mix_PlayChannel(-1, sfxInvalidClick, 0);
+						}
 					}
 				}
 				else{
