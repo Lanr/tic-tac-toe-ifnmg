@@ -26,7 +26,7 @@ const int COMP = 4;
 #define NULLCHAR '\0'
 
 int pressedPosition;
-int posX, posY; //Posições da matriz que representa o grid
+int posX, posY; //Posicoes da matriz que representa o grid
 char grid[GRID_SIZE][GRID_SIZE];
 char player;
 char winner;
@@ -252,7 +252,7 @@ int GetPosition(int x, int y){
 		posY = 2;
 	}
 	else{
-		printf("Posição invalida.\n");
+		printf("Posicao invalida.\n");
 		return 0;
 	}
 
@@ -408,7 +408,7 @@ void CheckIfWon(char player){
 	}
 
 	if (won){
-		printf("Diagonal secundária!\n");
+		printf("Diagonal secundaria!\n");
 		winner = player;
 		return;
 	}
