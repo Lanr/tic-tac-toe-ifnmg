@@ -1,4 +1,4 @@
-#ifdef _linux_
+#ifdef linux
 	#include <SDL2/SDL.h>
 	#include <SDL2/SDL_ttf.h>
 	#include <SDL2/SDL_image.h>
@@ -6,7 +6,7 @@
 	#include <cstdio>
 #elif _WIN32
 	#include <SDL.h>
-	//#include <SDL_ttf.h>
+	#include <SDL_ttf.h>
 	#include <SDL_image.h>
 	#include <SDL_mixer.h>
 	#include <cstdio>
@@ -36,6 +36,9 @@ int ocupados;
 SDL_Surface *imgGrid = NULL;
 SDL_Surface *imgX = NULL;
 SDL_Surface *imgO = NULL;
+SDL_Surface *imgXWon = NULL;
+SDL_Surface *imgOWon = NULL;
+SDL_Surface *imgDraw = NULL;
 SDL_Surface *imgNewGame = NULL;
 SDL_Surface *screen = NULL;
 
@@ -124,6 +127,21 @@ bool InitWindow(){
 
 	if ((sfxInvalidClick = Mix_LoadWAV("sfx/invalid_click_sound.wav")) == NULL){
 		printf("Unable to load \"invalid_click_sound.wav\"! Mix Error: %s\n", Mix_GetError());
+		return 0;
+	}
+
+	if((imgDraw = IMG_Load("img/draw.png")) == NULL){
+		printf("Unable to load \"draw.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+
+	if((imgXWon = IMG_Load("img/x_won.png")) == NULL){
+		printf("Unable to load \"x_won.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+
+	if((imgOWon = IMG_Load("img/o_won.png")) == NULL){
+		printf("Unable to load \"o_won.png\"! SDL Error: %s\n", SDL_GetError());
 		return 0;
 	}
 
@@ -422,14 +440,22 @@ void GameLoop(bool &quit, bool &newGame){
 					if ((winner == CIRCLE) || (winner == CROSS) || (ocupados == 9)){
 						if ((winner == CIRCLE) || (winner == CROSS)){
 							printf("Player %c ganhou\n", winner);
-							SDL_Delay(50);
 							Mix_PlayChannel(-1, sfxGameEnded, 0);
 						}
 						else{
 							printf("Empate!\n");
+							winner = NULLCHAR;
 						}
 						SDL_BlitSurface(imgGrid, NULL, screen, NULL);
 						SDL_BlitSurface(player == CIRCLE ? imgX : imgO, NULL, imgGrid, &gridRect[pressedPosition - 1]);
+						SDL_UpdateWindowSurface(window);
+						SDL_Delay(500);
+
+						if(winner == NULLCHAR){
+							SDL_BlitSurface(imgDraw, NULL, screen, NULL);
+						}else{
+							SDL_BlitSurface(winner == CIRCLE ? imgOWon : imgXWon, NULL, screen, NULL);
+						}
 						SDL_UpdateWindowSurface(window);
 						SDL_Delay(2000);
 						newGame = true;
