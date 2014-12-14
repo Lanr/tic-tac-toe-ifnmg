@@ -1,4 +1,4 @@
-#ifdef linux
+﻿#ifdef linux
 	#include <SDL2/SDL.h>
 	#include <SDL2/SDL_ttf.h>
 	#include <SDL2/SDL_image.h>
@@ -25,12 +25,21 @@ const int COMP = 4;
 #define CROSS 'X'
 #define NULLCHAR '\0'
 
+int ocupados;
 int pressedPosition;
 int posX, posY; //Posicoes da matriz que representa o grid
 char grid[GRID_SIZE][GRID_SIZE];
 char player;
 char winner;
-int ocupados;
+
+//Texturas
+SDL_Texture *textureGrid = NULL;
+SDL_Texture *textureX = NULL;
+SDL_Texture *textureO = NULL;
+SDL_Texture *textureXWon = NULL;
+SDL_Texture *textureOWon = NULL;
+SDL_Texture *textureDraw = NULL;
+SDL_Texture *textureNewGame = NULL;
 
 //Imagens
 SDL_Surface *imgGrid = NULL;
@@ -50,6 +59,9 @@ Mix_Chunk *sfxGameEnded = NULL;
 
 //Janela
 SDL_Window *window = NULL;
+
+//Renderer
+SDL_Renderer *renderer = NULL;
 
 //Posições do grid
 SDL_Rect gridRect[9];
@@ -79,6 +91,11 @@ bool InitWindow(){
 		}
 		else{
 			screen = SDL_GetWindowSurface(window);
+			renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+			if (renderer == NULL){
+				printf("Unable to init renderer! SDL Error: %s\n", SDL_GetError());
+				return 0;
+			}
 		}
 
 	}
@@ -94,9 +111,17 @@ bool InitWindow(){
 		printf("Unable to load \"grid.png\"! SDL Error: %s\n", SDL_GetError());
 		return 0;
 	}
+	else if((textureGrid = SDL_CreateTextureFromSurface(renderer, imgGrid)) == NULL){
+		printf("Unable to load grid texture! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
 
 	if ((imgX = IMG_Load("img/x.png")) == NULL){
 		printf("Unable to load \"x.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+	else if ((textureX = SDL_CreateTextureFromSurface(renderer, imgX)) == NULL){
+		printf("Unable to load X texture! SDL Error: %s\n", SDL_GetError());
 		return 0;
 	}
 
@@ -104,9 +129,44 @@ bool InitWindow(){
 		printf("Unable to laod \"o.png\"! SDL Error: %s\n", SDL_GetError());
 		return 0;
 	}
+	else if ((textureO = SDL_CreateTextureFromSurface(renderer, imgO)) == NULL){
+		printf("Unable to load O texture! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
 
 	if ((imgNewGame = IMG_Load("img/new_game.png")) == NULL){
 		printf("Unable to load \"new_game.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+	else if ((textureNewGame = SDL_CreateTextureFromSurface(renderer, imgNewGame)) == NULL){
+		printf("Unable to load NewGame texture! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+
+	if ((imgDraw = IMG_Load("img/draw.png")) == NULL){
+		printf("Unable to load \"draw.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+	else if ((textureDraw = SDL_CreateTextureFromSurface(renderer, imgDraw)) == NULL){
+		printf("Unable to load Draw texture! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+
+	if ((imgXWon = IMG_Load("img/x_won.png")) == NULL){
+		printf("Unable to load \"x_won.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+	else if ((textureXWon = SDL_CreateTextureFromSurface(renderer, imgXWon)) == NULL){
+		printf("Unable to load XWon texture! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+
+	if ((imgOWon = IMG_Load("img/o_won.png")) == NULL){
+		printf("Unable to load \"o_won.png\"! SDL Error: %s\n", SDL_GetError());
+		return 0;
+	}
+	else if ((textureOWon = SDL_CreateTextureFromSurface(renderer, imgOWon)) == NULL){
+		printf("Unable to load OWon texture! SDL Error: %s\n", SDL_GetError());
 		return 0;
 	}
 
@@ -130,30 +190,7 @@ bool InitWindow(){
 		return 0;
 	}
 
-	if((imgDraw = IMG_Load("img/draw.png")) == NULL){
-		printf("Unable to load \"draw.png\"! SDL Error: %s\n", SDL_GetError());
-		return 0;
-	}
-
-	if((imgXWon = IMG_Load("img/x_won.png")) == NULL){
-		printf("Unable to load \"x_won.png\"! SDL Error: %s\n", SDL_GetError());
-		return 0;
-	}
-
-	if((imgOWon = IMG_Load("img/o_won.png")) == NULL){
-		printf("Unable to load \"o_won.png\"! SDL Error: %s\n", SDL_GetError());
-		return 0;
-	}
-
 	return 1;
-
-}
-
-void NewGameScreen(){
-	//TODO
-	//O "new game" deve funcionar como um botão, e não fazer parte do background
-
-	SDL_BlitSurface(imgNewGame, NULL, screen, NULL);
 
 }
 
@@ -260,7 +297,7 @@ int GetPosition(int x, int y){
 
 }
 
-void GetEvents(int player, bool &quit, bool &newGame){
+void GetEvents(bool &quit, bool &newGame){
 
 	while (SDL_PollEvent(&event) != 0){
 
@@ -275,7 +312,6 @@ void GetEvents(int player, bool &quit, bool &newGame){
 			SDL_GetMouseState(&x, &y);
 
 			if (newGame){
-
 				if (((x >= 75) && (x <= 220)) && ((y >= 140) && (y <= 160))){
 					newGame = false;
 					return;
@@ -288,7 +324,6 @@ void GetEvents(int player, bool &quit, bool &newGame){
 			}
 			else{
 				if (GetPosition(x, y)){
-
 					if (player == CIRCLE){
 						if (grid[posX][posY] == NULLCHAR){
 							Mix_PlayChannel(-1, sfxClickO, 0);
@@ -321,26 +356,6 @@ void GetEvents(int player, bool &quit, bool &newGame){
 		}
 
 	}
-
-}
-
-void NewRound(){
-
-	for (int i = 0; i < GRID_SIZE; i++){
-		for (int j = 0; j < GRID_SIZE; j++){
-			grid[i][j] = NULLCHAR;
-		}
-	}
-
-	imgGrid = IMG_Load("img/grid.png");
-
-	if (imgGrid == NULL){
-		printf("Unable to load \"grid.png\"! SDL Error: %s\n", SDL_GetError());
-	}
-
-	winner = NULLCHAR;
-	ocupados = 0;
-	player = CIRCLE;
 
 }
 
@@ -425,12 +440,71 @@ void CheckIfWon(char player){
 
 }
 
+void NewRound(){
+
+	for (int i = 0; i < GRID_SIZE; i++){
+		for (int j = 0; j < GRID_SIZE; j++){
+			grid[i][j] = NULLCHAR;
+		}
+	}
+
+	winner = NULLCHAR;
+	player = CIRCLE;
+	ocupados = 0;
+
+}
+
+void NewGameScreen(){
+	//TODO
+	//O "new game" deve funcionar como um botão, e não fazer parte do background
+
+	SDL_RenderCopy(renderer, textureNewGame, NULL, NULL);
+
+}
+
+void GameScreen(){
+
+	int pos = 0;
+
+	for (int i = 0; i < GRID_SIZE; i++){
+		for (int j = 0; j < GRID_SIZE; j++){
+			if (grid[i][j] != NULLCHAR){
+				SDL_RenderCopy(renderer, grid[i][j] == CROSS ? textureX : textureO, NULL, &gridRect[pos]);
+			}
+			pos++;
+		}
+	}
+
+	SDL_RenderPresent(renderer);
+	
+}
+
+void EndGameScreen(){
+
+	if (winner == NULLCHAR){
+		SDL_RenderCopy(renderer, textureDraw, NULL, NULL);
+		//SDL_BlitSurface(imgDraw, NULL, screen, NULL);
+	}
+	else{
+		SDL_RenderCopy(renderer, winner == CIRCLE ? textureOWon : textureXWon, NULL, NULL);
+		//SDL_BlitSurface(winner == CIRCLE ? imgOWon : imgXWon, NULL, screen, NULL);
+	}
+	//SDL_UpdateWindowSurface(window);
+	SDL_RenderPresent(renderer);
+	SDL_Delay(2000);
+
+}
+
 void GameLoop(bool &quit, bool &newGame){
 
 	while (!quit){
+		
 		pressedPosition = 0;
 
-		GetEvents(player, quit, newGame);
+		GetEvents(quit, newGame);
+
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, textureGrid, NULL, NULL);
 
 		if (quit){
 			break;
@@ -439,61 +513,63 @@ void GameLoop(bool &quit, bool &newGame){
 			NewGameScreen();
 		}
 		else{
-
 			if (CheckPosition()){
-				SDL_BlitSurface(player == CIRCLE ? imgX : imgO, NULL, imgGrid, &gridRect[pressedPosition - 1]);
 				ocupados++;
 				if (ocupados > 4){
 					//TODO
 					CheckIfWon(player);
 
-					if ((winner == CIRCLE) || (winner == CROSS) || (ocupados == 9)){
-						if ((winner == CIRCLE) || (winner == CROSS)){
+					if ((winner != NULLCHAR) || (ocupados == 9)){
+						if (winner != NULLCHAR){
 							printf("Player %c ganhou\n", winner);
 							Mix_PlayChannel(-1, sfxGameEnded, 0);
 						}
 						else{
 							printf("Empate!\n");
-							winner = NULLCHAR;
 						}
-						SDL_BlitSurface(imgGrid, NULL, screen, NULL);
-						SDL_BlitSurface(player == CIRCLE ? imgX : imgO, NULL, imgGrid, &gridRect[pressedPosition - 1]);
-						SDL_UpdateWindowSurface(window);
+						GameScreen();
 						SDL_Delay(500);
-
-						if(winner == NULLCHAR){
-							SDL_BlitSurface(imgDraw, NULL, screen, NULL);
-						}else{
-							SDL_BlitSurface(winner == CIRCLE ? imgOWon : imgXWon, NULL, screen, NULL);
-						}
-						SDL_UpdateWindowSurface(window);
-						SDL_Delay(2000);
+						EndGameScreen();
 						newGame = true;
 						break;
 					}
 				}
 			}
 
-			SDL_BlitSurface(imgGrid, NULL, screen, NULL);
+			GameScreen();
 		}
 
-		SDL_UpdateWindowSurface(window);
+		SDL_RenderPresent(renderer);
 	}
 }
 
 void Close(){
 
 	SDL_DestroyWindow(window);
+	SDL_DestroyRenderer(renderer);
+
+	SDL_DestroyTexture(textureGrid);
+	SDL_DestroyTexture(textureX);
+	SDL_DestroyTexture(textureXWon);
+	SDL_DestroyTexture(textureO);
+	SDL_DestroyTexture(textureOWon);
+	SDL_DestroyTexture(textureDraw);
+	SDL_DestroyTexture(textureNewGame);
 
 	SDL_FreeSurface(imgGrid);
 	SDL_FreeSurface(imgX);
+	SDL_FreeSurface(imgXWon);
 	SDL_FreeSurface(imgO);
+	SDL_FreeSurface(imgOWon);
+	SDL_FreeSurface(imgDraw);
 	SDL_FreeSurface(imgNewGame);
 
 	Mix_FreeChunk(sfxClickX);
 	Mix_FreeChunk(sfxClickO);
 	Mix_FreeChunk(sfxGameEnded);
 
+	IMG_Quit();
+	SDL_Quit();
 }
 
 int main(int argc, char *argv[]){
@@ -507,7 +583,6 @@ int main(int argc, char *argv[]){
 	}
 
 	while (!quit){
-		GetEvents(player, quit, newGame);
 		SetGridRect();
 		NewRound();
 		GameLoop(quit, newGame);
